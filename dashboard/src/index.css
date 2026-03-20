@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-background: #F8FAFC;
+  --color-sidebar: #1E293B;
+  --color-sidebar-hover: #334155;
+  --color-text-main: #1E293B;
+  --color-text-muted: #64748B;
+  --color-danger: #DC2626;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Base Card Style */
+.card {
+  @apply bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden;
+}
+
+.card-header {
+  @apply px-5 py-4 border-b border-slate-100 flex items-center justify-between;
+}
+
+.card-title {
+  @apply text-sm font-semibold text-slate-800 uppercase tracking-wide;
+}
+
+.card-body {
+  @apply p-5;
+}
+
+/* Custom Scrollbar for activity feeds */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}

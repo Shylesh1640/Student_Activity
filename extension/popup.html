@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=320">
+  <title>Student Activity Monitor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #FFFFFF;
+      color: #1E293B;
+      font-size: 13px;
+    }
+
+    /* ─── Header ──────────────────────── */
+    .header {
+      background: #1E293B;
+      color: #FFFFFF;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon {
+      width: 24px;
+      height: 24px;
+      background: #2563EB;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #DC2626;
+      transition: background 0.3s ease;
+    }
+
+    .status-dot.connected {
+      background: #16A34A;
+      box-shadow: 0 0 6px rgba(22, 163, 74, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 4px rgba(22, 163, 74, 0.4); }
+      50% { box-shadow: 0 0 10px rgba(22, 163, 74, 0.7); }
+    }
+
+    /* ─── Content ─────────────────────── */
+    .content {
+      padding: 16px;
+    }
+
+    /* ─── Name Section ────────────────── */
+    .name-section {
+      margin-bottom: 12px;
+    }
+
+    .name-label {
+      font-size: 11px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .name-display {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1E293B;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .name-display:hover {
+      border-color: #E2E8F0;
+      background: #F8FAFC;
+    }
+
+    .name-input {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1E293B;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 2px solid #2563EB;
+      outline: none;
+      width: 100%;
+      background: #F0F5FF;
+    }
+
+    /* ─── Status Card ─────────────────── */
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-title {
+      font-size: 11px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+    }
+
+    .stat-row:not(:last-child) {
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .stat-label {
+      color: #64748B;
+      font-size: 12px;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 12px;
+      color: #1E293B;
+    }
+
+    .stat-value.online {
+      color: #16A34A;
+    }
+
+    .stat-value.offline {
+      color: #DC2626;
+    }
+
+    /* ─── Notice ──────────────────────── */
+    .notice {
+      background: #F0F5FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: center;
+      font-size: 11px;
+      color: #2563EB;
+      line-height: 1.5;
+    }
+
+    .notice-icon {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ─── Footer ──────────────────────── */
+    .footer {
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 10px;
+      color: #94A3B8;
+      border-top: 1px solid #F1F5F9;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">📚</div>
+      <span class="header-title">Activity Monitor</span>
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <div id="loginSection" class="content" style="display: none;">
+    <div class="card">
+      <div class="card-title" style="margin-bottom: 12px; font-size: 13px; color: #1E293B;">Student Login</div>
+      <form id="loginForm">
+        <input class="name-input" id="usernameInput" type="text" placeholder="Username" required style="margin-bottom: 8px; display: block;">
+        <input class="name-input" id="passwordInput" type="password" placeholder="Password" required style="margin-bottom: 12px; display: block;">
+        <button type="submit" id="loginBtn" style="width: 100%; padding: 10px; background: #2563EB; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+          Connect to Server
+        </button>
+      </form>
+      <div id="loginError" style="color: #DC2626; margin-top: 10px; font-size: 12px; text-align: center; display: none;">Invalid credentials</div>
+    </div>
+  </div>
+
+  <div id="mainSection" class="content" style="display: none;">
+    <div class="name-section">
+      <div class="name-label">Monitoring Active For</div>
+      <div class="name-display" id="nameDisplay" style="cursor: default;">Student</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Session Status</div>
+      <div class="stat-row">
+        <span class="stat-label">Connection</span>
+        <span class="stat-value" id="connectionStatus">Disconnected</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Session Started</span>
+        <span class="stat-value" id="sessionStart">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Tab Switches</span>
+        <span class="stat-value" id="tabSwitches">0</span>
+      </div>
+    </div>
+
+    <div class="notice">
+      <span class="notice-icon">🔒</span>
+      This session is being monitored by your teacher.
+    </div>
+
+    <button id="logoutBtn" style="width: 100%; margin-top: 14px; padding: 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+      Logout Session
+    </button>
+  </div>
+
+  <div class="footer">
+    Student Activity Monitor v1.0.0
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
