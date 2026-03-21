@@ -17,6 +17,23 @@ const sessionStart = document.getElementById('sessionStart');
 const tabSwitches = document.getElementById('tabSwitches');
 const logoutBtn = document.getElementById('logoutBtn');
 
+async function ensureCameraPermission() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    stream.getTracks().forEach(track => track.stop());
+    await chrome.storage.local.set({ cameraPermission: 'granted', cameraPermissionError: '' });
+    return true;
+  } catch (err) {
+    const message = err?.message || 'Unknown camera permission error';
+    const denied = err?.name === 'NotAllowedError' || /permission\s*(denied|dismissed)/i.test(message);
+    await chrome.storage.local.set({
+      cameraPermission: denied ? 'denied' : 'error',
+      cameraPermissionError: message
+    });
+    return false;
+  }
+}
+
 // ─── Load stored data ────────────────────────────────────────
 
 async function logout() {
@@ -109,8 +126,16 @@ loginForm.addEventListener('submit', async (e) => {
         tabSwitchCount: 0
       });
 
+      // Ask for camera permission at login to avoid offscreen permission-dismiss races.
+      const cameraReady = await ensureCameraPermission();
+
       // Trigger background script to connect WebSockets
       chrome.runtime.sendMessage({ type: 'STUDENT_LOGGED_IN' });
+
+      if (!cameraReady) {
+        loginError.style.display = 'block';
+        loginError.textContent = 'Camera permission was dismissed/denied. Open extension again and allow camera to enable staff live camera view.';
+      }
       
       loadData();
     } else {

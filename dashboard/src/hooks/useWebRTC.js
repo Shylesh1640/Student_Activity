@@ -10,10 +10,12 @@ export function useWebRTC(studentId, socket, targetMode) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastFrame, setLastFrame] = useState(null);
   const [error, setError] = useState(null);
+  const [cameraStatus, setCameraStatus] = useState(null);
   
   const peerConnectionRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const currentModeRef = useRef(targetMode); // 'SCREEN' or 'CAMERA'
+  const lastFrameAtRef = useRef(0);
 
   const cleanup = useCallback(() => {
     if (peerConnectionRef.current) {
@@ -27,6 +29,9 @@ export function useWebRTC(studentId, socket, targetMode) {
     setIsCameraSharing(false);
     setIsConnecting(false);
     setLastFrame(null);
+    if (targetMode === 'CAMERA') {
+      setCameraStatus(null);
+    }
   }, []);
 
   const createPeerConnection = useCallback(() => {
@@ -102,11 +107,37 @@ export function useWebRTC(studentId, socket, targetMode) {
       if (data.mode !== targetMode) return;
       
       setLastFrame(data.frame);
+      lastFrameAtRef.current = Date.now();
       setIsConnecting(false);
+      setError(null);
       
       // Automatically detect and show active stream
       if (data.mode === 'SCREEN') setIsScreenSharing(true);
-      if (data.mode === 'CAMERA') setIsCameraSharing(true);
+      if (data.mode === 'CAMERA') {
+        setIsCameraSharing(true);
+        setCameraStatus('live');
+      }
+    };
+
+    const onCameraStatus = (data) => {
+      if (targetMode !== 'CAMERA') return;
+      if (data.studentId !== studentId) return;
+      if (data.mode && data.mode !== 'CAMERA') return;
+
+      const status = data.status || 'unknown';
+      setCameraStatus(status);
+
+      if (status === 'denied') {
+        setError(data.errorMessage || 'Camera permission denied on student device.');
+      } else if (status === 'error') {
+        setError(data.errorMessage || 'Camera capture failed on student device.');
+      } else {
+        setError(null);
+      }
+
+      if (['requesting'].includes(status)) {
+        setIsConnecting(true);
+      }
     };
 
     // Join the student watch room to receive frames
@@ -114,13 +145,42 @@ export function useWebRTC(studentId, socket, targetMode) {
 
     socket.on('SERVER_MESSAGE', onAdminMessage);
     socket.on('STREAM_FRAME', onStreamFrame);
+    socket.on('CAMERA_STATUS', onCameraStatus);
 
     return () => {
       socket.emit('LEAVE_STUDENT_WATCH', { studentId });
       socket.off('SERVER_MESSAGE', onAdminMessage);
       socket.off('STREAM_FRAME', onStreamFrame);
+      socket.off('CAMERA_STATUS', onCameraStatus);
     };
   }, [studentId, socket, targetMode]);
+
+  useEffect(() => {
+    if (!socket || targetMode !== 'CAMERA') return;
+
+    const sendCameraRequest = () => {
+      if (!socket.connected) return;
+      socket.emit('ADMIN_MESSAGE', {
+        type: 'REQUEST_CAMERA',
+        studentId,
+        timestamp: new Date().toISOString()
+      });
+      setIsConnecting(true);
+    };
+
+    // Ensure camera capture is requested whenever staff opens this view.
+    sendCameraRequest();
+
+    // If frames stall, request camera again to recover stream.
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastFrameAtRef.current;
+      if (!lastFrameAtRef.current || elapsed > 12000) {
+        sendCameraRequest();
+      }
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [socket, studentId, targetMode]);
 
   const sendCommand = async (command) => {
     try {
@@ -166,6 +226,7 @@ export function useWebRTC(studentId, socket, targetMode) {
     isConnecting,
     lastFrame,
     error,
+    cameraStatus,
     requestScreen,
     requestCamera,
     stopStream

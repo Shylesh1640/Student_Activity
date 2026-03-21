@@ -200,15 +200,9 @@ export default function StudentDetail() {
               <div className="card overflow-hidden bg-slate-50 flex flex-col">
                 <div className="card-header bg-white">
                   <h3 className="card-title flex items-center"><Camera className="w-4 h-4 mr-2"/> Camera</h3>
-                  {cameraRTC.isCameraSharing ? (
-                    <button onClick={cameraRTC.stopStream} className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg flex items-center font-bold">
-                      <Square className="w-3 h-3 mr-1" /> Stop
-                    </button>
-                  ) : (
-                    <button onClick={cameraRTC.requestCamera} disabled={!student.isOnline || cameraRTC.isConnecting} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg flex items-center font-bold tracking-wide disabled:opacity-50">
-                      {cameraRTC.isConnecting ? '...' : 'Request'}
-                    </button>
-                  )}
+                  <span className={`text-xs px-3 py-1.5 rounded-lg font-bold tracking-wide ${cameraRTC.isCameraSharing ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                    {cameraRTC.isCameraSharing ? 'Live' : 'Waiting'}
+                  </span>
                 </div>
                 <div className="aspect-video bg-black relative flex items-center justify-center">
                   <video 
@@ -227,6 +221,14 @@ export default function StudentDetail() {
                   )}
                   {!cameraRTC.isCameraSharing && !cameraRTC.lastFrame && (
                     <span className="text-white/40 text-sm font-medium">Camera feed inactive</span>
+                  )}
+                </div>
+                <div className="px-4 py-3 bg-white border-t border-slate-200 text-xs">
+                  <div className="text-slate-500">
+                    Camera status: <span className="font-semibold text-slate-700">{cameraRTC.cameraStatus || 'unknown'}</span>
+                  </div>
+                  {cameraRTC.error && (
+                    <div className="text-red-600 mt-1">{cameraRTC.error}</div>
                   )}
                 </div>
               </div>
