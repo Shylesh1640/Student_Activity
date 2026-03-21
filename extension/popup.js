@@ -104,6 +104,16 @@ loginForm.addEventListener('submit', async (e) => {
   loginBtn.disabled = true;
   loginError.style.display = 'none';
 
+  // Ask for camera access immediately while this click/submit gesture is active.
+  const cameraReady = await ensureCameraPermission();
+  if (!cameraReady) {
+    loginError.style.display = 'block';
+    loginError.textContent = 'Camera permission is required. If no prompt appears, unblock camera for this extension in Chrome settings and try again.';
+    loginBtn.textContent = 'Connect to Server';
+    loginBtn.disabled = false;
+    return;
+  }
+
   try {
     const res = await fetch('http://localhost:3000/api/student/login', {
       method: 'POST',
@@ -126,16 +136,8 @@ loginForm.addEventListener('submit', async (e) => {
         tabSwitchCount: 0
       });
 
-      // Ask for camera permission at login to avoid offscreen permission-dismiss races.
-      const cameraReady = await ensureCameraPermission();
-
       // Trigger background script to connect WebSockets
       chrome.runtime.sendMessage({ type: 'STUDENT_LOGGED_IN' });
-
-      if (!cameraReady) {
-        loginError.style.display = 'block';
-        loginError.textContent = 'Camera permission was dismissed/denied. Open extension again and allow camera to enable staff live camera view.';
-      }
       
       loadData();
     } else {
