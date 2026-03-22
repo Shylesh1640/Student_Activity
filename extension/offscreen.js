@@ -9,6 +9,17 @@ let cameraStream = null;
 let screenInterval = null;
 let cameraInterval = null;
 
+function reportCameraStatus(status, errorMessage = '') {
+  chrome.runtime.sendMessage({
+    target: 'background',
+    type: 'CAMERA_STATUS',
+    mode: 'CAMERA',
+    status,
+    errorMessage,
+    timestamp: new Date().toISOString()
+  });
+}
+
 // ─── Message handler from background.js ──────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -22,7 +33,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       startCameraCapture();
       break;
     case 'STOP_CAPTURE':
-      stopCapture();
+      stopCapture(message.mode);
       break;
     case 'WEBRTC_ANSWER':
       handleWebRTCAnswer(message);
@@ -48,37 +59,49 @@ async function startScreenCapture() {
 
     screenStream.getTracks().forEach(track => {
       track.onended = () => {
-        alert("Screen sharing is REQUIRED for this session. Please reconnect.");
+        console.warn('[Offscreen] Screen track ended, retrying capture');
         stopCapture('SCREEN');
         startScreenCapture(); // Force retry
       };
     });
   } catch (err) {
     console.error('[Offscreen] Screen capture failed:', err.message);
-    alert("Screen sharing is REQUIRED to continue. Please select a screen.");
     setTimeout(startScreenCapture, 2000); // Retry
   }
 }
 
 async function startCameraCapture() {
   try {
-    const allowCamera = confirm("Your teacher has requested camera access. Allow camera recording?");
-    if (!allowCamera) {
-      console.log('[Offscreen] Camera access denied by student');
-      return;
-    }
-
     if (cameraStream) stopCapture('CAMERA');
+
+    reportCameraStatus('requesting');
 
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 10 } },
       audio: false
     });
 
+    reportCameraStatus('granted');
+
     startFrameCapture('CAMERA', cameraStream);
     console.log('[Offscreen] Camera capture started');
+
+    cameraStream.getTracks().forEach(track => {
+      track.onended = () => {
+        console.warn('[Offscreen] Camera track ended, retrying capture');
+        reportCameraStatus('ended', 'Camera track ended');
+        stopCapture('CAMERA');
+        setTimeout(startCameraCapture, 1500);
+      };
+    });
   } catch (err) {
     console.error('[Offscreen] Camera capture failed:', err.message);
+    const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+    reportCameraStatus(denied ? 'denied' : 'error', err?.message || 'Unknown camera error');
+    // Do not loop on dismissed/denied permission; wait for explicit user re-allow.
+    if (!denied) {
+      setTimeout(startCameraCapture, 2000);
+    }
   }
 }
 
@@ -158,6 +181,7 @@ function stopCapture(mode) {
       cameraStream.getTracks().forEach(track => track.stop());
       cameraStream = null;
     }
+    reportCameraStatus('stopped');
     const v = document.getElementById('capture-video-camera');
     if (v) v.remove();
     console.log('[Offscreen] Camera capture stopped');

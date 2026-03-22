@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import useStudentStore from '../store/studentStore';
@@ -9,8 +9,11 @@ const SERVER_URL = `http://${window.location.hostname}:3000`;
 let globalSocket = null;
 let socketInitialized = false;
 
-function createSocket(handlers) {
-  if (globalSocket && globalSocket.connected) return;
+function createSocket(handlers, onReady) {
+  if (globalSocket) {
+    onReady(globalSocket);
+    if (globalSocket.connected) return;
+  }
 
   globalSocket = io(SERVER_URL, {
     query: { role: 'admin' },
@@ -21,6 +24,7 @@ function createSocket(handlers) {
 
   globalSocket.on('connect', () => {
     console.log('[Socket] Connected to server');
+    onReady(globalSocket);
   });
 
   globalSocket.on('STUDENT_ONLINE', (data) => {
@@ -73,6 +77,7 @@ export function useSocket() {
   const addActivity = useStudentStore(state => state.addActivity);
   const updateStudentFromStatus = useStudentStore(state => state.updateStudentFromStatus);
   const addAlert = useAlertStore(state => state.addAlert);
+  const [socketInstance, setSocketInstance] = useState(globalSocket);
 
   const handlersRef = useRef({ updateStudentStatus, addActivity, updateStudentFromStatus, addAlert });
 
@@ -81,11 +86,13 @@ export function useSocket() {
 
     if (!socketInitialized) {
       socketInitialized = true;
-      createSocket(handlersRef.current);
+      createSocket(handlersRef.current, setSocketInstance);
+    } else if (globalSocket) {
+      setSocketInstance(globalSocket);
     }
 
     return () => {};
   }, [updateStudentStatus, addActivity, updateStudentFromStatus, addAlert]);
 
-  return globalSocket;
+  return socketInstance;
 }

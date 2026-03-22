@@ -21,6 +21,7 @@ const PRODUCTIVITY_PATTERNS = [
 
 let socket = null;
 let tabSwitchCount = 0;
+let offscreenCreationPromise = null;
 
 // ─── Initialization ──────────────────────────────────────────
 
@@ -70,7 +71,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   }
 
   if (message.target === 'background') {
-    if (['WEBRTC_OFFER', 'WEBRTC_ICE_CANDIDATE', 'STREAM_FRAME'].includes(message.type)) {
+    if (['WEBRTC_OFFER', 'WEBRTC_ICE_CANDIDATE', 'STREAM_FRAME', 'CAMERA_STATUS'].includes(message.type)) {
       if (message.type === 'STREAM_FRAME') {
         socket?.emit('STREAM_FRAME', message);
       } else {
@@ -142,7 +143,8 @@ function handleServerMessage(message) {
       startCameraShare();
       break;
     case 'STOP_STREAM':
-      stopMediaCapture();
+      // Keep camera always-on for the full student session.
+      stopMediaCapture('SCREEN');
       break;
     case 'WEBRTC_ANSWER':
     case 'WEBRTC_ICE_CANDIDATE':
@@ -326,25 +328,46 @@ async function startCameraShare() {
   });
 }
 
-async function stopMediaCapture() {
+async function stopMediaCapture(mode) {
   chrome.runtime.sendMessage({
     target: 'offscreen',
-    type: 'STOP_CAPTURE'
+    type: 'STOP_CAPTURE',
+    mode
   });
 }
 
 async function createOffscreenDocumentIfNeeded() {
-  const existingContexts = await chrome.runtime.getContexts({
-    contextTypes: ['OFFSCREEN_DOCUMENT']
-  });
+  if (offscreenCreationPromise) {
+    await offscreenCreationPromise;
+    return;
+  }
 
-  if (existingContexts.length > 0) return;
+  offscreenCreationPromise = (async () => {
+    const existingContexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT']
+    });
 
-  await chrome.offscreen.createDocument({
-    url: 'offscreen.html',
-    reasons: ['USER_MEDIA', 'DISPLAY_MEDIA'],
-    justification: 'Capture screen or camera for teacher monitoring'
-  });
+    if (existingContexts.length > 0) return;
+
+    try {
+      await chrome.offscreen.createDocument({
+        url: 'offscreen.html',
+        reasons: ['USER_MEDIA', 'DISPLAY_MEDIA'],
+        justification: 'Capture screen or camera for teacher monitoring'
+      });
+    } catch (err) {
+      // Ignore creation race across near-simultaneous calls in MV3 service worker lifecycle.
+      if (!String(err && err.message).includes('Only a single offscreen document may be created')) {
+        throw err;
+      }
+    }
+  })();
+
+  try {
+    await offscreenCreationPromise;
+  } finally {
+    offscreenCreationPromise = null;
+  }
 }
 
 

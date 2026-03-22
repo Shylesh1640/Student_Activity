@@ -405,7 +405,11 @@ async function sendCommand(req, res) {
     const wsHandler = req.app.get('wsHandler');
     if (!wsHandler) return res.status(500).json({ error: 'WS Handler not initialized' });
 
-    const success = wsHandler.sendToStudent(studentId, command);
+    const success = wsHandler.sendToStudent(studentId, {
+      type: command,
+      studentId,
+      timestamp: new Date().toISOString()
+    });
     if (success) {
       res.json({ success: true, message: 'Command sent' });
     } else {

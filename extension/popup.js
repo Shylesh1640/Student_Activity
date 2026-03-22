@@ -17,6 +17,23 @@ const sessionStart = document.getElementById('sessionStart');
 const tabSwitches = document.getElementById('tabSwitches');
 const logoutBtn = document.getElementById('logoutBtn');
 
+async function ensureCameraPermission() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    stream.getTracks().forEach(track => track.stop());
+    await chrome.storage.local.set({ cameraPermission: 'granted', cameraPermissionError: '' });
+    return true;
+  } catch (err) {
+    const message = err?.message || 'Unknown camera permission error';
+    const denied = err?.name === 'NotAllowedError' || /permission\s*(denied|dismissed)/i.test(message);
+    await chrome.storage.local.set({
+      cameraPermission: denied ? 'denied' : 'error',
+      cameraPermissionError: message
+    });
+    return false;
+  }
+}
+
 // ─── Load stored data ────────────────────────────────────────
 
 async function logout() {
@@ -86,6 +103,16 @@ loginForm.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Connecting...';
   loginBtn.disabled = true;
   loginError.style.display = 'none';
+
+  // Ask for camera access immediately while this click/submit gesture is active.
+  const cameraReady = await ensureCameraPermission();
+  if (!cameraReady) {
+    loginError.style.display = 'block';
+    loginError.textContent = 'Camera permission is required. If no prompt appears, unblock camera for this extension in Chrome settings and try again.';
+    loginBtn.textContent = 'Connect to Server';
+    loginBtn.disabled = false;
+    return;
+  }
 
   try {
     const res = await fetch('http://localhost:3000/api/student/login', {
