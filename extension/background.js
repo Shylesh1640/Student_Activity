@@ -1,6 +1,6 @@
 importScripts('socket.io.min.js');
 
-const SERVER_URL = 'http://localhost:3000'; // Change to your deployed backend URL
+const SERVER_URL = 'https://student-activity-backend-eyqy.onrender.com';
 
 // Social media blocklist
 const SOCIAL_MEDIA_DOMAINS = [

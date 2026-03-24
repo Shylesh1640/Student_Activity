@@ -2,7 +2,7 @@
 // Student Activity Monitor — Popup Script
 // ─────────────────────────────────────────────────────────────
 
-const SERVER_URL = 'http://localhost:3000'; // Change this to your deployed backend URL
+const SERVER_URL = 'https://student-activity-backend-eyqy.onrender.com';
 
 const loginSection = document.getElementById('loginSection');
 const mainSection = document.getElementById('mainSection');
