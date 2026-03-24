@@ -2,6 +2,8 @@
 // Student Activity Monitor — Popup Script
 // ─────────────────────────────────────────────────────────────
 
+const SERVER_URL = 'http://localhost:3000'; // Change this to your deployed backend URL
+
 const loginSection = document.getElementById('loginSection');
 const mainSection = document.getElementById('mainSection');
 const loginForm = document.getElementById('loginForm');
@@ -40,7 +42,7 @@ async function logout() {
   const { studentId } = await chrome.storage.local.get('studentId');
   if (studentId) {
     try {
-      await fetch('http://localhost:3000/api/student/logout', {
+      await fetch(`${SERVER_URL}/api/student/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId })
@@ -115,7 +117,7 @@ loginForm.addEventListener('submit', async (e) => {
   }
 
   try {
-    const res = await fetch('http://localhost:3000/api/student/login', {
+    const res = await fetch(`${SERVER_URL}/api/student/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import useStudentStore from '../store/studentStore';
 import useAlertStore from '../store/alertStore';
 
-const SERVER_URL = `http://${window.location.hostname}:3000`;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || `http://${window.location.hostname}:3000`;
 
 let globalSocket = null;
 let socketInitialized = false;

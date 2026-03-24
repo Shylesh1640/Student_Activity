@@ -1,6 +1,6 @@
 importScripts('socket.io.min.js');
 
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'http://localhost:3000'; // Change to your deployed backend URL
 
 // Social media blocklist
 const SOCIAL_MEDIA_DOMAINS = [
