@@ -63,6 +63,33 @@ function createSocket(handlers, onReady) {
     }
   });
 
+  // ─── Listen for generic ALERT_CREATED events ───────────────────
+  // This handles CAMERA_PERMISSION and any future alert types
+  globalSocket.on('ALERT_CREATED', (data) => {
+    if (data.alert) {
+      handlers.addAlert(data.alert);
+
+      // Show a contextual toast based on alert type
+      if (data.alertType === 'CAMERA_PERMISSION') {
+        toast.error(`⚠️ Camera denied by student ${data.studentId}`, {
+          duration: 6000,
+          position: 'top-right',
+          icon: '📷'
+        });
+      } else {
+        toast.error(`Alert: ${data.title || 'New alert received'}`, {
+          duration: 5000,
+          position: 'top-right'
+        });
+      }
+
+      // Play alert sound
+      const audio = new Audio('/alert.mp3');
+      audio.volume = 0.3;
+      audio.play().catch(() => {});
+    }
+  });
+
   globalSocket.on('disconnect', () => {
     console.log('[Socket] Disconnected');
   });

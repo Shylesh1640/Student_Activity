@@ -1,8 +1,13 @@
 const Alert = require('../models/Alert');
 
-// Debounce map: key = `${studentId}:${domain}`, value = last alert timestamp
+// ─── Debounce maps ─────────────────────────────────────────────────
+// Social media: key = `${studentId}:${domain}`, value = last alert timestamp
 const alertDebounce = new Map();
 const DEBOUNCE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+// Camera permission: key = studentId, value = last alert timestamp
+const cameraDebounce = new Map();
+const CAMERA_DEBOUNCE_MS = 2 * 60 * 1000; // 2 minutes
 
 /**
  * Process a social media alert.
@@ -52,7 +57,44 @@ async function processAlert(studentId, message) {
   }
 }
 
-// Clean up old debounce entries periodically
+/**
+ * Process a camera permission alert.
+ * Creates an Alert document with type CAMERA_PERMISSION.
+ *
+ * @param {string} studentId
+ * @param {string} errorMessage - the error/denial reason
+ * @returns {Promise<object|null>} the Alert document if created
+ */
+async function processCameraAlert(studentId, errorMessage) {
+  const now = Date.now();
+
+  // Debounce per student
+  const last = cameraDebounce.get(studentId) || 0;
+  if (now - last < CAMERA_DEBOUNCE_MS) {
+    console.log(`[Alert] Debounced camera alert for ${studentId}`);
+    return null;
+  }
+  cameraDebounce.set(studentId, now);
+
+  try {
+    const alert = await Alert.create({
+      studentId,
+      timestamp: new Date(),
+      alertType: 'CAMERA_PERMISSION',
+      title: 'Camera permission denied',
+      details: errorMessage || 'Student denied camera access',
+      isAcknowledged: false
+    });
+
+    console.log(`[Alert] Camera permission alert created for ${studentId}`);
+    return alert;
+  } catch (err) {
+    console.error('[Alert] Error creating camera alert:', err.message);
+    return null;
+  }
+}
+
+// ── Periodic cleanup of stale debounce entries ──────────────────────
 setInterval(() => {
   const now = Date.now();
   for (const [key, timestamp] of alertDebounce.entries()) {
@@ -60,6 +102,11 @@ setInterval(() => {
       alertDebounce.delete(key);
     }
   }
-}, 60000); // Clean up every minute
+  for (const [key, timestamp] of cameraDebounce.entries()) {
+    if (now - timestamp > CAMERA_DEBOUNCE_MS) {
+      cameraDebounce.delete(key);
+    }
+  }
+}, 60000);
 
-module.exports = { processAlert };
+module.exports = { processAlert, processCameraAlert };

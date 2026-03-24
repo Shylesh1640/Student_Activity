@@ -22,6 +22,10 @@ const alertSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  details: {
+    type: String,
+    default: ''
+  },
   isAcknowledged: {
     type: Boolean,
     default: false

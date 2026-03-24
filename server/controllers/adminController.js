@@ -10,6 +10,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { getSnapshots } = require('../services/snapshotService');
 
 /**
  * Admin Login
@@ -110,6 +111,9 @@ async function getStudentAlerts(req, res) {
 
 /**
  * Generate Student Report
+ * 
+ * FIX: Now reads startDate and endDate from req.body instead of
+ *      hardcoding "today". Falls back to today if not provided.
  */
 async function generateStudentReport(req, res) {
   try {
@@ -117,13 +121,25 @@ async function generateStudentReport(req, res) {
     const student = await Student.findOne({ studentId: id });
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Fetch logs for today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    // ── Read date range from request body ─────────────────────────
+    let startOfDay, endOfDay;
+
+    if (req.body.startDate && req.body.endDate) {
+      startOfDay = new Date(req.body.startDate);
+      endOfDay = new Date(req.body.endDate);
+      // Ensure endOfDay includes the full day
+      if (endOfDay.getHours() === 0 && endOfDay.getMinutes() === 0) {
+        endOfDay.setHours(23, 59, 59, 999);
+      }
+    } else {
+      // Fallback: today
+      startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+    }
+
+    const dateLabel = startOfDay.toISOString().split('T')[0];
 
     const logs = await ActivityLog.find({
       studentId: id,
@@ -134,6 +150,9 @@ async function generateStudentReport(req, res) {
       studentId: id,
       timestamp: { $gte: startOfDay, $lte: endOfDay }
     });
+
+    // ── Fetch snapshots for the date range ────────────────────────
+    const snapshots = await getSnapshots(id, startOfDay, endOfDay);
 
     // Enhanced Analysis
     const totalTabSwitches = logs.filter(l => l.type === 'TAB_ACTIVITY').length;
@@ -210,6 +229,10 @@ async function generateStudentReport(req, res) {
     const stream = fs.createWriteStream(pdfPath);
     doc.pipe(stream);
 
+    // ─────────────────────────────────────────────────────────────
+    // PDF CONTENT
+    // ─────────────────────────────────────────────────────────────
+
     // PDF Header
     doc.fontSize(22).fillColor('#1e40af').text('Student Activity Report', { align: 'center' });
     doc.moveDown(0.5);
@@ -222,7 +245,7 @@ async function generateStudentReport(req, res) {
     doc.moveDown(0.5);
     doc.fontSize(12).fillColor('#334155').text(`Name: ${student.name}`);
     doc.text(`Student ID: ${id}`);
-    doc.text(`Report Date: ${today}`);
+    doc.text(`Report Period: ${startOfDay.toLocaleDateString()} — ${endOfDay.toLocaleDateString()}`);
     doc.moveDown(1.5);
 
     // Statistics Grid
@@ -252,6 +275,14 @@ async function generateStudentReport(req, res) {
     
     doc.fillColor('#64748b').text('Paste Events:', 300, statsY3);
     doc.fillColor('#0f172a').text(pasteCount.toString(), 400, statsY3);
+
+    doc.moveDown(0.5);
+    const statsY4 = doc.y;
+    doc.fillColor('#64748b').text('Screen Captures:', 50, statsY4);
+    doc.fillColor('#0f172a').text(snapshots.screen.length.toString(), 150, statsY4);
+    
+    doc.fillColor('#64748b').text('Camera Captures:', 300, statsY4);
+    doc.fillColor('#0f172a').text(snapshots.camera.length.toString(), 400, statsY4);
     
     doc.moveDown(2);
 
@@ -282,6 +313,7 @@ async function generateStudentReport(req, res) {
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#e2e8f0').stroke();
     doc.moveDown(0.5);
     activityTimeline.slice(-30).forEach(log => {
+      if (doc.y > 700) doc.addPage();
       const time = new Date(log.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       doc.fontSize(9).fillColor('#64748b').text(`${time} - `, { continued: true, indent: 15 });
       doc.fillColor('#0f172a').text(log.title ? log.title.substring(0, 70) : 'Untitled Tab');
@@ -289,13 +321,92 @@ async function generateStudentReport(req, res) {
       doc.moveDown(0.2);
     });
 
+    // ─────────────────────────────────────────────────────────────
+    // SNAPSHOT IMAGES SECTION — ALL images, paginated 2 per page
+    // ─────────────────────────────────────────────────────────────
+    const IMAGE_WIDTH = 400;
+    const IMAGE_HEIGHT = 250;
+    const IMAGES_PER_PAGE = 2;
+
+    /**
+     * Helper: insert all snapshot images of a given mode into the PDF.
+     * Paginates at 2 images per page and handles missing files safely.
+     */
+    function insertSnapshotSection(sectionTitle, snapshotList) {
+      if (snapshotList.length === 0) return;
+
+      doc.addPage();
+      doc.fontSize(18).fillColor('#1e40af').text(sectionTitle, { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(10).fillColor('#64748b').text(`${snapshotList.length} image(s) captured`, { align: 'center' });
+      doc.moveDown(1);
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#e2e8f0').stroke();
+      doc.moveDown(1);
+
+      let imagesOnPage = 0;
+
+      for (let i = 0; i < snapshotList.length; i++) {
+        const snap = snapshotList[i];
+
+        // Resolve absolute path from relative path
+        const absPath = path.join(__dirname, '..', snap.imagePath);
+
+        // Skip if the file does not exist
+        if (!fs.existsSync(absPath)) {
+          console.warn(`[PDF] Missing snapshot file: ${absPath}`);
+          continue;
+        }
+
+        // Paginate: start a new page after every 2 images
+        if (imagesOnPage >= IMAGES_PER_PAGE) {
+          doc.addPage();
+          imagesOnPage = 0;
+        }
+
+        // Timestamp label
+        const timeLabel = new Date(snap.timestamp).toLocaleString();
+        doc.fontSize(9).fillColor('#334155').text(`📸 ${timeLabel}`, 50);
+        doc.moveDown(0.3);
+
+        try {
+          doc.image(absPath, 50, doc.y, {
+            width: IMAGE_WIDTH,
+            height: IMAGE_HEIGHT,
+            fit: [IMAGE_WIDTH, IMAGE_HEIGHT],
+            align: 'center'
+          });
+          doc.moveDown(0.2);
+          // Move cursor past the image
+          doc.y += IMAGE_HEIGHT + 10;
+        } catch (imgErr) {
+          console.error(`[PDF] Error embedding image ${absPath}:`, imgErr.message);
+          doc.fontSize(9).fillColor('#ef4444').text(`  [Image could not be loaded: ${snap.imagePath}]`);
+        }
+
+        doc.moveDown(0.5);
+        imagesOnPage++;
+      }
+    }
+
+    // Insert screen captures
+    insertSnapshotSection('Screen Captures', snapshots.screen);
+
+    // Insert camera captures
+    insertSnapshotSection('Camera Captures', snapshots.camera);
+
+    // Footer
+    doc.addPage();
+    doc.moveDown(2);
+    doc.fontSize(8).fillColor('#94a3b8')
+      .text('Generated by Student Activity Monitoring System', 50, doc.y, { align: 'center' });
+
     doc.end();
     await new Promise((resolve) => stream.on('finish', resolve));
 
     // Save to Database
     const report = await Report.create({
       studentId: id,
-      date: today,
+      date: dateLabel,
       totalTabSwitches,
       searchCount,
       tabBlurs,
@@ -517,6 +628,10 @@ async function deleteStudent(req, res) {
     await Attendance.deleteMany({ studentId: id });
     await Report.deleteMany({ studentId: id });
     
+    // Also clean up snapshots
+    const Snapshot = require('../models/Snapshot');
+    await Snapshot.deleteMany({ studentId: id });
+
     // Delete student record
     await Student.deleteOne({ studentId: id });
 

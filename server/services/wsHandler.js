@@ -1,7 +1,8 @@
 const { Server } = require('socket.io');
 const Student = require('../models/Student');
 const ActivityLog = require('../models/ActivityLog');
-const { processAlert } = require('./alertEngine');
+const { processAlert, processCameraAlert } = require('./alertEngine');
+const { saveFrame } = require('./snapshotService');
 
 class WSHandler {
   constructor(server) {
@@ -9,7 +10,9 @@ class WSHandler {
       cors: {
         origin: "*",
         methods: ["GET", "POST"]
-      }
+      },
+      // Increase max buffer for base64 frame payloads
+      maxHttpBufferSize: 5e6 // 5 MB
     });
 
     this.studentSockets = new Map(); // studentId -> socketId
@@ -122,12 +125,40 @@ class WSHandler {
       this.handleStudentMessage(studentId, message);
     });
 
-    // Specifically handle stream frames for performance
+    // ─── Handle stream frames: relay to watchers + save snapshot ──
     socket.on('STREAM_FRAME', (data) => {
+      // Relay frame to admins watching this student (real-time view)
       this.io.to(`watch:${studentId}`).emit('STREAM_FRAME', {
         studentId,
         ...data
       });
+
+      // Throttled save to disk (async, fire-and-forget)
+      if (data.frame && data.mode) {
+        saveFrame(studentId, data.mode, data.frame).catch(err => {
+          console.error(`[WS] Snapshot save error for ${studentId}:`, err.message);
+        });
+      }
+    });
+
+    // ─── Handle camera permission status ─────────────────────────
+    socket.on('CAMERA_STATUS', async (data) => {
+      const { status, errorMessage } = data;
+
+      if (status === 'denied' || status === 'error') {
+        const alert = await processCameraAlert(studentId, errorMessage || 'Camera access denied');
+
+        if (alert) {
+          // Broadcast real-time alert to admin dashboard
+          this.broadcastToAdmins('ALERT_CREATED', {
+            alert: alert.toObject(),
+            alertType: 'CAMERA_PERMISSION',
+            studentId,
+            title: alert.title,
+            details: alert.details
+          });
+        }
+      }
     });
 
     socket.on('disconnect', async () => {
@@ -233,4 +264,3 @@ class WSHandler {
 }
 
 module.exports = WSHandler;
-
