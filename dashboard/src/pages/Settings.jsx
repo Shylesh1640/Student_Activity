@@ -18,7 +18,7 @@ export default function Settings() {
     setIsUpdating(true);
     try {
       const { data } = await axios.post(
-        `http://${window.location.hostname}:3000/api/admin/change-password`,
+        `${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/change-password`,
         { oldPassword, newPassword },
         { withCredentials: true }
       );

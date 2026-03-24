@@ -21,8 +21,8 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const [studentsRes, alertsRes] = await Promise.all([
-          axios.get(`http://${window.location.hostname}:3000/api/admin/students`, { withCredentials: true }),
-          axios.get(`http://${window.location.hostname}:3000/api/admin/alerts?acknowledged=false`, { withCredentials: true })
+          axios.get(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students`, { withCredentials: true }),
+          axios.get(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/alerts?acknowledged=false`, { withCredentials: true })
         ]);
         
         setStudents(studentsRes.data);
@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   const handleAcknowledge = async (id) => {
     try {
-      await axios.post(`http://${window.location.hostname}:3000/api/admin/alerts/${id}/acknowledge`, {}, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/alerts/${id}/acknowledge`, {}, { withCredentials: true });
       acknowledgeAlert(id, 'admin@school.edu');
     } catch {
       console.error('Failed to acknowledge alert');

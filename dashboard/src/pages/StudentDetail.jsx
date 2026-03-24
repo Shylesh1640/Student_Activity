@@ -51,7 +51,7 @@ export default function StudentDetail() {
   useEffect(() => {
     if (activeTab === 'activity') {
       setIsLoadingLogs(true);
-      axios.get(`http://${window.location.hostname}:3000/api/admin/students/${id}/logs`, { withCredentials: true })
+      axios.get(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${id}/logs`, { withCredentials: true })
         .then(res => {
           setLogs(res.data);
         })
@@ -62,7 +62,7 @@ export default function StudentDetail() {
   // Fetch reports when tab is 'reports'
   useEffect(() => {
     if (activeTab === 'reports') {
-      axios.get(`http://${window.location.hostname}:3000/api/admin/students/${id}/reports`, { withCredentials: true })
+      axios.get(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${id}/reports`, { withCredentials: true })
         .then(res => {
           setReports(res.data);
         });
@@ -71,7 +71,7 @@ export default function StudentDetail() {
 
   const generateReport = async () => {
     try {
-      const { data } = await axios.post(`http://${window.location.hostname}:3000/api/admin/students/${id}/report`, {}, { withCredentials: true });
+      const { data } = await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${id}/report`, {}, { withCredentials: true });
       setReports([data, ...reports]); // The response is the report object itself in the controller
     } catch (err) {
       console.error('Failed to generate report', err);
@@ -81,7 +81,7 @@ export default function StudentDetail() {
   const handleSaveStudent = async () => {
     try {
       setIsSaving(true);
-      await axios.patch(`http://${window.location.hostname}:3000/api/admin/students/${id}`, {
+      await axios.patch(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${id}`, {
         name: editedName,
         notes: editedNotes
       }, { withCredentials: true });
@@ -100,7 +100,7 @@ export default function StudentDetail() {
     if (confirm(`Are you sure you want to PERMANENTLY delete student ${student.name} and ALL their activity data? This cannot be undone.`)) {
       try {
         setIsDeleting(true);
-        await axios.delete(`http://${window.location.hostname}:3000/api/admin/students/${id}`, { withCredentials: true });
+        await axios.delete(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${id}`, { withCredentials: true });
         removeStudentStore(id);
         navigate('/students');
       } catch (err) {
@@ -319,7 +319,7 @@ export default function StudentDetail() {
                     </p>
                   </div>
                   <a 
-                    href={`http://${window.location.hostname}:3000/api/admin/reports/download/${report._id}`}
+                    href={`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/reports/download/${report._id}`}
                     className="w-full text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 rounded border border-slate-200 transition-colors flex justify-center items-center text-sm"
                   >
                     <Download className="w-4 h-4 mr-2" />

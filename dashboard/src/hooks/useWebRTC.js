@@ -184,7 +184,7 @@ export function useWebRTC(studentId, socket, targetMode) {
 
   const sendCommand = async (command) => {
     try {
-      await axios.post(`http://${window.location.hostname}:3000/api/admin/command`, {
+      await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/command`, {
         studentId,
         command
       }, { withCredentials: true });

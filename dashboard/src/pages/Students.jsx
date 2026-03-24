@@ -34,7 +34,7 @@ export default function Students() {
     e.preventDefault();
     setIsCreating(true);
     try {
-      const { data } = await axios.post(`http://${window.location.hostname}:3000/api/admin/students`, newStudent, { withCredentials: true });
+      const { data } = await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students`, newStudent, { withCredentials: true });
       if (data.success) {
         toast.success(`Created student ${data.name}`);
         setIsModalOpen(false);

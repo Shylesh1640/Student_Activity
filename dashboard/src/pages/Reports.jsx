@@ -31,7 +31,7 @@ export default function Reports() {
       }
 
       const { data } = await axios.post(
-        `http://${window.location.hostname}:3000/api/admin/students/${selectedStudent}/report`,
+        `${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/students/${selectedStudent}/report`,
         { startDate: start, endDate: end },
         { withCredentials: true }
       );
@@ -40,7 +40,7 @@ export default function Reports() {
       
       // Automatically trigger download
       if (data.downloadUrl) {
-        window.open(`http://${window.location.hostname}:3000${data.downloadUrl}`, '_blank');
+        window.open(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}${data.downloadUrl}`, '_blank');
       }
 
     } catch (err) {

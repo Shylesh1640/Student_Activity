@@ -34,7 +34,7 @@ export default function Alerts() {
 
   const handleAcknowledge = async (id) => {
     try {
-      await axios.post(`http://${window.location.hostname}:3000/api/admin/alerts/${id}/acknowledge`, {}, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/alerts/${id}/acknowledge`, {}, { withCredentials: true });
       acknowledgeAlert(id, 'admin@school.edu'); // Normally we'd use the logged in admin's email
     } catch {
       console.error('Failed to acknowledge alert');
@@ -45,7 +45,7 @@ export default function Alerts() {
     if (!window.confirm('Are you sure you want to resolve all active alerts?')) return;
     setIsAcknowledgingAll(true);
     try {
-      await axios.post(`http://${window.location.hostname}:3000/api/admin/alerts/acknowledge-all`, {}, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/api/admin/alerts/acknowledge-all`, {}, { withCredentials: true });
       acknowledgeAll(null, 'admin@school.edu');
     } catch {
       console.error('Failed to mass acknowledge alerts');
