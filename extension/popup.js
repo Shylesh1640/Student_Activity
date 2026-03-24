@@ -19,21 +19,24 @@ const sessionStart = document.getElementById('sessionStart');
 const tabSwitches = document.getElementById('tabSwitches');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// Open dedicated camera window after login
+async function openCameraWindow() {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('camera.html'),
+    type: 'popup',
+    width: 900,
+    height: 600
+  }, (window) => {
+    if (chrome.runtime.lastError) {
+      console.error('[Popup] Failed to open camera window:', chrome.runtime.lastError);
+    }
+  });
+}
+
 async function ensureCameraPermission() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    stream.getTracks().forEach(track => track.stop());
-    await chrome.storage.local.set({ cameraPermission: 'granted', cameraPermissionError: '' });
-    return true;
-  } catch (err) {
-    const message = err?.message || 'Unknown camera permission error';
-    const denied = err?.name === 'NotAllowedError' || /permission\s*(denied|dismissed)/i.test(message);
-    await chrome.storage.local.set({
-      cameraPermission: denied ? 'denied' : 'error',
-      cameraPermissionError: message
-    });
-    return false;
-  }
+  // Camera permission is now handled by the dedicated camera.html page
+  // This function is kept for compatibility but not used
+  return true;
 }
 
 // ─── Load stored data ────────────────────────────────────────
@@ -102,19 +105,10 @@ loginForm.addEventListener('submit', async (e) => {
   
   const username = usernameInput.value.trim();
   const password = passwordInput.value.trim();
+  console.log('[Popup] Login form submission started');
   loginBtn.textContent = 'Connecting...';
   loginBtn.disabled = true;
   loginError.style.display = 'none';
-
-  // Ask for camera access immediately while this click/submit gesture is active.
-  const cameraReady = await ensureCameraPermission();
-  if (!cameraReady) {
-    loginError.style.display = 'block';
-    loginError.textContent = 'Camera permission is required. If no prompt appears, unblock camera for this extension in Chrome settings and try again.';
-    loginBtn.textContent = 'Connect to Server';
-    loginBtn.disabled = false;
-    return;
-  }
 
   try {
     const res = await fetch(`${SERVER_URL}/api/student/login`, {
@@ -140,6 +134,12 @@ loginForm.addEventListener('submit', async (e) => {
 
       // Trigger background script to connect WebSockets
       chrome.runtime.sendMessage({ type: 'STUDENT_LOGGED_IN' });
+      
+      // Open dedicated camera window
+      console.log('[Popup] Logged in successfully, opening camera window');
+      setTimeout(() => {
+        openCameraWindow();
+      }, 500);
       
       loadData();
     } else {
