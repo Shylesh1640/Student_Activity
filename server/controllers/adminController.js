@@ -42,7 +42,8 @@ async function login(req, res) {
     // Set cookie
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // required for sameSite: 'none'
+      sameSite: 'none', // required for cross-origin Vercel to Render communication
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
