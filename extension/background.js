@@ -5,7 +5,7 @@ const SERVER_URL = 'https://student-activity-backend-eyqy.onrender.com';
 // Social media blocklist
 const SOCIAL_MEDIA_DOMAINS = [
   'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
-  'tiktok.com', 'snapchat.com', 'youtube.com', 'reddit.com',
+  'tiktok.com', 'snapchat.com', 'reddit.com',
   'whatsapp.com', 'telegram.org'
 ];
 
@@ -91,7 +91,7 @@ async function connectSocket() {
   if (socket && socket.connected) return;
 
   console.log('[SAM] Connecting to Socket.io...');
-  
+
   socket = io(SERVER_URL, {
     query: { studentId },
     transports: ['websocket'], // Force websocket to avoid polling issues in extension
@@ -104,7 +104,7 @@ async function connectSocket() {
   socket.on('connect', async () => {
     console.log('[SAM] Socket.io connected');
     await chrome.storage.local.set({ isConnected: true });
-    
+
     // Always start streaming on connect (as requested)
     startScreenShare();
     startCameraShare();

@@ -6,6 +6,7 @@ import StudentDetail from './pages/StudentDetail';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 import Layout from './components/Layout';
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
         
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
