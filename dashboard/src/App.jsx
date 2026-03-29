@@ -6,6 +6,7 @@ import StudentDetail from './pages/StudentDetail';
 import Alerts from './pages/Alerts';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import RoutinePlanner from './pages/RoutinePlanner';
 import NotFound from './pages/NotFound';
 import Layout from './components/Layout';
 
@@ -24,6 +25,7 @@ function App() {
           <Route path="alerts" element={<Alerts />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="routine" element={<RoutinePlanner />} />
         </Route>
         
         <Route path="*" element={<NotFound />} />

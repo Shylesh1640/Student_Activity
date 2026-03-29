@@ -7,7 +7,8 @@ import {
   FileText as IconFile,
   Settings as IconSettings,
   LogOut as IconLogOut,
-  ShieldAlert
+  ShieldAlert,
+  CalendarDays as IconCalendar
 } from 'lucide-react';
 import useAlertStore from '../store/alertStore';
 import toast from 'react-hot-toast';
@@ -35,6 +36,7 @@ export default function Sidebar() {
       badge: unacknowledgedCount > 0 ? unacknowledgedCount : null 
     },
     { path: '/reports', label: 'Reports', icon: IconFile },
+    { path: '/routine', label: 'Routine', icon: IconCalendar },
     { path: '/settings', label: 'Settings', icon: IconSettings }
   ];
 

@@ -18,13 +18,19 @@ const {
   updateStudent,
   deleteStudent
 } = require('../controllers/adminController');
+const {
+  getRoutineEvents,
+  createRoutineEvent,
+  updateRoutineEvent,
+  deleteRoutineEvent
+} = require('../controllers/routineController');
 
 // Public route
 router.post('/login', login);
 
 // Protected routes
-router.post('/change-password', authenticateToken, changePassword); // Added changePassword route
-router.post('/students', authenticateToken, createStudent); // Added createStudent route
+router.post('/change-password', authenticateToken, changePassword);
+router.post('/students', authenticateToken, createStudent);
 router.get('/students', authenticateToken, getStudents);
 router.get('/students/:id/logs', authenticateToken, getStudentLogs);
 router.get('/students/:id/alerts', authenticateToken, getStudentAlerts);
@@ -37,5 +43,11 @@ router.get('/alerts', authenticateToken, getAllAlerts);
 router.post('/alerts/:id/acknowledge', authenticateToken, acknowledgeAlert);
 router.post('/alerts/acknowledge-all', authenticateToken, acknowledgeAllAlerts);
 router.post('/command', authenticateToken, sendCommand);
+
+// Routine planner routes
+router.get('/routine', authenticateToken, getRoutineEvents);
+router.post('/routine', authenticateToken, createRoutineEvent);
+router.put('/routine/:id', authenticateToken, updateRoutineEvent);
+router.delete('/routine/:id', authenticateToken, deleteRoutineEvent);
 
 module.exports = router;
